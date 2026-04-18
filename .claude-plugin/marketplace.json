@@ -1,0 +1,20 @@
+{
+  "name": "rust-reverse-engineering-dev",
+  "description": "Development marketplace for the Rust Reverse Engineering skill",
+  "owner": {
+    "name": "jingjing2222",
+    "email": "hj.jingjing2222@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "rust-reverse-engineering",
+      "description": "Rust reverse engineering skill for Claude Code: triage binaries, demangle symbols, recover likely crate boundaries, and map FFI, panic, unwind, and async paths.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "jingjing2222",
+        "email": "hj.jingjing2222@gmail.com"
+      }
+    }
+  ]
+}

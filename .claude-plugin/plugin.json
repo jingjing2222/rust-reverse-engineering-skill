@@ -1,0 +1,21 @@
+{
+  "name": "rust-reverse-engineering",
+  "description": "Rust reverse engineering skill for Claude Code: triage binaries, demangle symbols, recover likely crate boundaries, and map FFI, panic, unwind, and async paths.",
+  "version": "0.1.0",
+  "author": {
+    "name": "jingjing2222",
+    "email": "hj.jingjing2222@gmail.com"
+  },
+  "homepage": "https://github.com/jingjing2222/rust-reverse-engineering-skill",
+  "repository": "https://github.com/jingjing2222/rust-reverse-engineering-skill",
+  "license": "UNLICENSED",
+  "keywords": [
+    "rust",
+    "reverse-engineering",
+    "binary-analysis",
+    "ghidra",
+    "ida",
+    "binary-ninja",
+    "malware-triage"
+  ]
+}
