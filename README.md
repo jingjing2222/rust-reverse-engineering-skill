@@ -2,7 +2,11 @@
 
 A shared Rust reverse-engineering workflow packaged for both Claude Code and Codex.
 
+This skill is intended for defensive security work. Reverse-engineering tooling is not inherently harmful; used responsibly, it helps developers inspect what their own compiled artifacts expose, validate hardening assumptions, audit attack surface, and better protect the binaries they ship.
+
 It is designed for **authorized** reverse engineering, malware triage in controlled environments, CTFs, binary auditing, and compatibility/interoperability work. The shared skill body fingerprints Rust builds, demangles symbols, surfaces likely crate boundaries, highlights panic/unwind and FFI edges, and drives a repeatable static/dynamic analysis workflow.
+
+If you publish compiled deliverables, prefer using this skill to understand and defend your own outputs, or binaries you are explicitly permitted to assess.
 
 ## What it does
 
