@@ -167,3 +167,7 @@ rust-reverse-engineering-skill/
 - Want to install in Codex: follow the install steps above
 - Want the full analysis workflow: read [skills/rust-reverse-engineering/SKILL.md](skills/rust-reverse-engineering/SKILL.md)
 - Want the Claude command entry point: read [commands/re-rust.md](commands/re-rust.md)
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).

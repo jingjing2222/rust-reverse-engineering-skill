@@ -9,7 +9,7 @@
   },
   "homepage": "https://github.com/jingjing2222/rust-reverse-engineering-skill",
   "repository": "https://github.com/jingjing2222/rust-reverse-engineering-skill",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "keywords": [
     "rust",
     "reverse-engineering",
