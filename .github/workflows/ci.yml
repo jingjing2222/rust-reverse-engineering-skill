@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate plugin manifests
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path(".")
+
+          manifest_paths = [
+              root / ".claude-plugin" / "marketplace.json",
+              root / ".claude-plugin" / "plugin.json",
+              root / ".codex-plugin" / "plugin.json",
+              root / ".agents" / "plugins" / "marketplace.json",
+          ]
+
+          for path in manifest_paths:
+              if not path.is_file():
+                  raise SystemExit(f"Missing manifest: {path}")
+              with path.open("r", encoding="utf-8") as fh:
+                  data = json.load(fh)
+              if not isinstance(data, dict):
+                  raise SystemExit(f"Manifest is not a JSON object: {path}")
+
+          claude_marketplace = json.loads((root / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+          assert claude_marketplace["name"], "Claude marketplace name is required"
+          assert claude_marketplace["plugins"], "Claude marketplace must list at least one plugin"
+          for plugin in claude_marketplace["plugins"]:
+              if plugin.get("source") != "./":
+                  raise SystemExit("Claude marketplace plugin source must remain './' for repo-based installs")
+
+          claude_plugin = json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+          assert claude_plugin["name"] == "rust-reverse-engineering"
+          assert claude_plugin["version"]
+
+          codex_plugin = json.loads((root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+          assert codex_plugin["name"] == "rust-reverse-engineering"
+          skills_path = root / codex_plugin["skills"]
+          if not skills_path.is_dir():
+              raise SystemExit(f"Codex skills path does not exist: {skills_path}")
+
+          codex_marketplace = json.loads((root / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+          assert codex_marketplace["plugins"], "Codex marketplace must list at least one plugin"
+          source = codex_marketplace["plugins"][0]["source"]
+          if source.get("source") != "local" or source.get("path") != "./":
+              raise SystemExit("Repo-scoped Codex marketplace must keep local path './'")
+
+          required_docs = [
+              root / "README.md",
+              root / "commands" / "re-rust.md",
+              root / "skills" / "rust-reverse-engineering" / "SKILL.md",
+          ]
+          for path in required_docs:
+              if not path.is_file():
+                  raise SystemExit(f"Missing required documentation file: {path}")
+
+          print("Manifest validation passed.")
+          PY
+
+      - name: Validate shell scripts
+        run: |
+          while IFS= read -r -d '' script; do
+            echo "Checking $script"
+            bash -n "$script"
+          done < <(find skills/rust-reverse-engineering/scripts -type f -name '*.sh' -print0)
+
