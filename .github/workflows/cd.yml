@@ -19,47 +19,17 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Build distributable archives
-        env:
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          set -euo pipefail
-
-          short_sha="${HEAD_SHA::7}"
-          package_root="rust-reverse-engineering-skill"
-          stage_dir="$(mktemp -d)"
-          out_dir="$PWD/dist"
-
-          mkdir -p "$stage_dir/$package_root" "$out_dir"
-
-          rsync -a \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.claude/settings.local.json' \
-            ./ "$stage_dir/$package_root/"
-
-          tar -C "$stage_dir" -czf "$out_dir/${package_root}-${short_sha}.tar.gz" "$package_root"
-          (
-            cd "$stage_dir"
-            zip -qr "$out_dir/${package_root}-${short_sha}.zip" "$package_root"
-          )
-
-          (
-            cd "$out_dir"
-            sha256sum "${package_root}-${short_sha}.tar.gz" "${package_root}-${short_sha}.zip" > SHA256SUMS.txt
-          )
-
-          rm -rf "$stage_dir"
+        run: bash .github/scripts/package_dist.sh "${{ github.event.workflow_run.head_sha }}" "$PWD/dist"
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rust-reverse-engineering-dist-${{ github.event.workflow_run.head_sha }}
           path: dist/*
           if-no-files-found: error
           retention-days: 30
-
