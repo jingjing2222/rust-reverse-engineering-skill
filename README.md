@@ -1,21 +1,24 @@
 # Rust Reverse Engineering Skill
 
-A shared Rust reverse-engineering workflow packaged for both Claude Code and Codex.
+Shared Rust reverse-engineering skill for Claude Code and Codex.
 
-This skill is intended for defensive security work. Reverse-engineering tooling is not inherently harmful; used responsibly, it helps developers inspect what their own compiled artifacts expose, validate hardening assumptions, audit attack surface, and better protect the binaries they ship.
+This project is for defensive security work. Reverse-engineering tooling is not inherently harmful; used responsibly, it helps developers understand what their own compiled artifacts expose, audit attack surface, and protect the binaries they ship.
 
-It is designed for **authorized** reverse engineering, malware triage in controlled environments, CTFs, binary auditing, and compatibility/interoperability work. The shared skill body fingerprints Rust builds, demangles symbols, surfaces likely crate boundaries, highlights panic/unwind and FFI edges, and drives a repeatable static/dynamic analysis workflow.
+Use it for binaries you own or are explicitly authorized to assess.
 
-If you publish compiled deliverables, prefer using this skill to understand and defend your own outputs, or binaries you are explicitly permitted to assess.
+## What It Helps With
 
-## What it does
+- Fingerprinting Rust binaries and libraries
+- Recovering likely crate boundaries and entry points
+- Surfacing panic, unwind, async, and FFI edges
+- Producing reviewable artifacts such as demangled symbols, disassembly, and Ghidra pseudocode bundles
+- Driving a repeatable static and dynamic analysis workflow
 
-- Fast binary triage: format, architecture, stripped/debug-info status, exported/imported symbols
-- Rust fingerprinting: v0/legacy mangling, `core`/`alloc`/`std` artifacts, panic and unwind paths, crate namespace recovery
-- Static analysis workflow for Ghidra, IDA, and Binary Ninja
-- Dynamic-analysis guidance for `gdb` and `lldb`
-- Artifact generation: triage bundles, demangled symbol dumps, import/export snapshots, disassembly, Ghidra pseudocode exports, and summary reports
-- Structured reporting: key namespaces, entry points, FFI boundaries, async/state-machine candidates, unresolved questions
+## Who This Is For
+
+- Developers auditing their own release binaries
+- Security engineers reviewing compiled Rust deliverables
+- Authorized interoperability, compatibility, malware-triage, or CTF work
 
 ## Requirements
 
@@ -23,124 +26,115 @@ Required:
 
 - `file`
 - `strings`
-- `readelf` or `llvm-readelf` for ELF, or `otool` for Mach-O
 - `nm` or `llvm-nm`
 - `objdump` or `llvm-objdump`, or `otool` on macOS
+- `readelf` or `llvm-readelf` for ELF, or `otool` for Mach-O
 
-Optional but recommended:
+Recommended:
 
 - `rustfilt`
 - `gdb` or `lldb`
 - Ghidra, IDA Pro, or Binary Ninja
 
-To auto-install missing tools when possible:
-
-```bash
-bash skills/rust-reverse-engineering/scripts/install-dep.sh rustfilt
-bash skills/rust-reverse-engineering/scripts/install-dep.sh ghidra
-```
-
-## Installation
+## Install
 
 ### Claude Code
 
-Load the repository directly as a local plugin:
+For a public GitHub repository, the recommended install path is the marketplace flow:
+
+```bash
+claude plugin marketplace add jingjing2222/rust-reverse-engineering-skill
+claude plugin install rust-reverse-engineering@jingjing2222-plugins
+```
+
+This flow was validated against the public repo.
+
+For local development, you can still load the repository directly:
 
 ```bash
 claude --plugin-dir /absolute/path/to/rust-reverse-engineering-skill
 ```
 
-Then use the slash command shown under `/help`, typically:
-
-```bash
-/rust-reverse-engineering:re-rust /path/to/binary
-```
-
-Claude-specific wrapper files live under `.claude-plugin/` and `commands/`.
-
 ### Codex
 
-Codex installs reusable workflows as plugins. This repository includes a Codex plugin manifest that bundles the shared Rust reverse-engineering skill.
+Codex can install this plugin from local or repo-scoped marketplaces, but public self-serve publishing to the official Codex Plugin Directory is not open yet. For now, use one of the local marketplace flows below.
 
-For **local testing**, follow the plugin install steps in `.codex/INSTALL.md`.
+Option A: install from this repo directly when you have the repo open in Codex.
 
-The short version is:
+1. Open this repository in Codex.
+2. Restart Codex if needed.
+3. Run `/plugins`.
+4. Open the `Rust Reverse Engineering Local` marketplace exposed by `.agents/plugins/marketplace.json`.
+5. Install `Rust Reverse Engineering`.
+
+Option B: install as a reusable local plugin.
 
 ```bash
 mkdir -p ~/.codex/plugins
 git clone https://github.com/jingjing2222/rust-reverse-engineering-skill.git ~/.codex/plugins/rust-reverse-engineering
-mkdir -p ~/.agents/plugins
 ```
 
-Then add the plugin to your personal marketplace, restart Codex, open `/plugins`, and install `Rust Reverse Engineering`.
+Add an entry to `~/.agents/plugins/marketplace.json` that points at the cloned path:
 
-For repo-scoped testing, this repository also includes `.agents/plugins/marketplace.json`, which exposes the repo itself as a local Codex plugin source.
-
-For **public distribution**, the current Codex docs say official public plugin publishing is not self-serve yet. The recommended path today is to publish the plugin repo publicly, keep `.codex-plugin/plugin.json` and marketplace metadata ready, and distribute it through repo or personal marketplaces until the official public Plugin Directory submission flow opens.
-
-Codex-specific wrapper files live under `.agents/plugins/`, `.codex/`, `.codex-plugin/`, and `skills/rust-reverse-engineering/agents/`.
-
-## Usage
-
-### Natural language
-
-The shared skill should trigger on requests like:
-
-- "Reverse engineer this Rust binary"
-- "Analyze this Rust executable"
-- "Demangle Rust symbols"
-- "Map crates and entry points in this binary"
-- "Find the FFI boundary in this Rust library"
-- "Trace panic and unwind paths"
-
-### Manual scripts
-
-Run the bundled scripts from the repository checkout:
-
-```bash
-# Check required and optional tooling
-bash skills/rust-reverse-engineering/scripts/check-deps.sh
-
-# Install one missing dependency
-bash skills/rust-reverse-engineering/scripts/install-dep.sh ghidra
-
-# Generate a reusable artifact bundle on disk
-bash skills/rust-reverse-engineering/scripts/collect-artifacts.sh ./target.bin
-
-# Export only the Ghidra headless pseudocode bundle
-bash skills/rust-reverse-engineering/scripts/export-ghidra-pseudocode.sh ./target.bin ./target-reverse-output/decompiled/ghidra
-
-# Override the automatically selected Mach-O slice when needed
-bash skills/rust-reverse-engineering/scripts/collect-artifacts.sh --macho-arch x86_64 ./target.bin
-
-# For very long runs in your own shell, you can also launch a detached job
-bash skills/rust-reverse-engineering/scripts/ghidra-job.sh start --max-functions 500 ./target.bin ./target-reverse-output/decompiled/ghidra
-bash skills/rust-reverse-engineering/scripts/ghidra-job.sh status ./target-reverse-output/decompiled/ghidra
-
-# Dump and demangle symbols (best effort)
-bash skills/rust-reverse-engineering/scripts/demangle-symbols.sh ./target.bin
-
-# Search the generated artifacts for runtime / async / panic / FFI / network buckets
-bash skills/rust-reverse-engineering/scripts/find-rust-patterns.sh ./target-reverse-output
+```json
+{
+  "name": "personal-local-plugins",
+  "interface": {
+    "displayName": "Personal Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "rust-reverse-engineering",
+      "source": {
+        "source": "local",
+        "path": "./.codex/plugins/rust-reverse-engineering"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    }
+  ]
+}
 ```
 
-`collect-artifacts.sh` now creates a source-like decompiler bundle under `decompiled/ghidra/` when `analyzeHeadless` is available. The exported `.c` files are Ghidra pseudocode, not original Rust source, but they provide the same kind of on-disk deliverable that APK-focused reverse-engineering workflows produce.
+Then restart Codex, run `/plugins`, open your marketplace, and install `Rust Reverse Engineering`.
 
-Universal Mach-O inputs are now thinned automatically before triage, disassembly, and Ghidra import. On Apple Silicon hosts, the default analysis slice is `arm64`; use `--macho-arch x86_64` only when you explicitly want the Intel slice. The chosen slice is recorded in `input/analysis-target.txt` and `decompiled/ghidra/analysis-target.txt`.
+You can also copy or symlink this repo into another local directory and point the marketplace entry there instead of cloning.
 
-Treat the export as final only when `decompiled/ghidra/status.txt` says `STATE: completed` or `decompiled/ghidra/complete.marker` exists. The script now updates `status.txt` and `summary.txt` while the export is still running, and the foreground wrapper prints periodic `PROGRESS:` heartbeats so long-running jobs do not look stalled.
+## Typical Output
 
-Inside Codex, keep the foreground export session alive until it reaches `STATE: completed`. Do not interrupt a long-running headless export unless the user explicitly asks to stop it. In particular, do not stop because “enough signal was gathered”, “the remaining analysis value seems low”, or “it is taking too long”. If the process is still alive, it is still running.
+The skill is built around artifact generation, not just chat answers. A normal run can produce:
 
-Use `decompiled/ghidra/runner-status.txt` to distinguish “slow but alive” from “actually stopped”. That file is updated by the shell wrapper every heartbeat interval even during the long auto-analysis phase, before the Java exporter starts updating decompilation counters. A fresh heartbeat together with `PROCESS_ALIVE: yes` means the export is still running. `ghidra-job.sh status` now also prints `RUNNER_HEARTBEAT_AGE_SECONDS`, `RUNNER_HEARTBEAT_STALE`, and `LIVENESS_HINT` so detached jobs do not depend on `status.txt` alone. `decompiled/ghidra/warning-summary.txt` summarizes headless `pcode error` / `Unable to resolve constructor` warnings so you can spot whether a handful of toxic functions are dominating the decompile noise.
+- Binary triage summaries
+- Demangled symbol inventories
+- Import and export snapshots
+- Pattern hits for runtime, panic, async, FFI, and network-adjacent code
+- Ghidra pseudocode exports when headless Ghidra is available
 
-## Repository structure
+Important: Ghidra output is pseudocode, not recovered original Rust source.
+
+## Key Behavior
+
+- Universal Mach-O inputs are thinned automatically to one analysis slice
+- Long-running Ghidra exports keep live progress markers on disk
+- `runner-status.txt` is the fast liveness signal for "still running" vs "actually stopped"
+
+## Repository Layout
+
+- `skills/rust-reverse-engineering/SKILL.md`: full skill instructions and analysis workflow
+- `commands/re-rust.md`: Claude slash-command entry point
+- `skills/rust-reverse-engineering/scripts/`: helper scripts for triage, symbol recovery, artifact collection, and Ghidra export
+- `.claude-plugin/`: Claude plugin and marketplace manifests
+- `.codex-plugin/` and `.agents/plugins/`: Codex plugin and marketplace manifests
+
+## Repository Structure
 
 ```text
 rust-reverse-engineering-skill/
 ├── .agents/
-│   └── plugins/
-│       └── marketplace.json
+│   └── plugins/marketplace.json
 ├── .claude-plugin/
 │   ├── marketplace.json
 │   └── plugin.json
@@ -152,23 +146,24 @@ rust-reverse-engineering-skill/
 │   └── re-rust.md
 └── skills/
     └── rust-reverse-engineering/
-        ├── agents/
-        │   └── openai.yaml
+        ├── agents/openai.yaml
         ├── references/
-        │   ├── setup-guide.md
-        │   ├── triage-and-fingerprinting.md
-        │   ├── rust-patterns.md
-        │   ├── static-analysis-workflow.md
-        │   └── dynamic-analysis-notes.md
         ├── scripts/
         │   ├── check-deps.sh
         │   ├── collect-artifacts.sh
+        │   ├── demangle-symbols.sh
         │   ├── export-ghidra-pseudocode.sh
+        │   ├── find-rust-patterns.sh
         │   ├── ghidra-job.sh
         │   ├── install-dep.sh
         │   ├── macho-slice.sh
-        │   ├── triage.sh
-        │   ├── demangle-symbols.sh
-        │   └── find-rust-patterns.sh
+        │   └── triage.sh
         └── SKILL.md
 ```
+
+## Where To Start
+
+- Want to install in Claude Code: use the marketplace commands above
+- Want to install in Codex: follow the install steps above
+- Want the full analysis workflow: read [skills/rust-reverse-engineering/SKILL.md](skills/rust-reverse-engineering/SKILL.md)
+- Want the Claude command entry point: read [commands/re-rust.md](commands/re-rust.md)
