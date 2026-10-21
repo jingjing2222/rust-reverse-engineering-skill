@@ -72,6 +72,14 @@ def main() -> None:
     require(isinstance(codex_interface.get("capabilities"), list) and codex_interface["capabilities"], "Codex plugin interface.capabilities must be a non-empty array")
     require(isinstance(codex_interface.get("defaultPrompt"), list) and codex_interface["defaultPrompt"], "Codex plugin interface.defaultPrompt must be a non-empty array")
 
+    for field in ("composerIcon", "logo"):
+        asset_value = codex_interface.get(field)
+        require(isinstance(asset_value, str) and asset_value.startswith("./"), f"Codex plugin interface.{field} must use a './'-prefixed path")
+        require(".." not in Path(asset_value).parts, f"Codex plugin interface.{field} must not contain '..'")
+        asset_path = (ROOT / asset_value).resolve()
+        require(asset_path.is_relative_to(ROOT), f"Codex plugin interface.{field} must stay inside the plugin root")
+        require(asset_path.is_file(), f"Codex plugin interface.{field} file does not exist: {asset_value}")
+
     skills_value = codex_plugin.get("skills")
     require(isinstance(skills_value, str) and skills_value, "Codex plugin skills path is required")
     skills_root = (ROOT / skills_value).resolve()
